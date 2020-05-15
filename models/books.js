@@ -6,11 +6,12 @@ const Book = mongoose.model('Book', {
   author: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Author'
-  }
+  },
   // authors: String
-  // isbn: String,
-  // isbn13: String,
-  // num_pages: Number,
+  average_rating: Number,
+  isbn: String,
+  isbn13: String,
+  num_pages: Number,
 })
 
 export default Book

@@ -34,14 +34,18 @@ if (process.env.RESET_DB) {
 
     await uniqueAuthors.forEach(async (authorName) => {
 
-      // Creating an author for each unique author
+      // Seeding authors from each unique author
       const author = await new Author({ name: authorName }).save()
 
-      // Creating a book for each of the authors books and assingnig the author 
+      // Seeding books for each of the authors books 
       await booksData.filter(book => book.authors === author.name).forEach(async (book) => {
         await new Book({
           title: book.title,
-          author: author
+          author: author, // unique author
+          average_rating: book.average_rating,
+          isbn: book.isbn,
+          isbn13: book.isbn13,
+          num_pages: book.num_pages,
         }).save()
       })
     })
@@ -49,10 +53,48 @@ if (process.env.RESET_DB) {
   seedDatabase()
 }
 
+const listEndpoints = require('express-list-endpoints')
+
+app.get('/', (req, res) => {
+  res.send(listEndpoints(app))
+})
+
+
+app.get('/books', async (req, res) => {
+  const { title, sort } = req.query
+  console.log(req.query)
+  const titleRegex = new RegExp(`\\b${title}\\b`, 'i')
+
+  const sortQuery = (sort) => {
+    if (sort === 'rating') return { average_rating: -1 }
+    if (sort === 'pages') return { num_pages: -1 }
+    if (sort === 'title') return { title: 1 }
+  }
+
+  if (title) {
+    const books = await Book.find({
+      title: titleRegex
+    })
+      .sort(sortQuery(sort))
+      .populate('author')
+    res.json(books)
+  } else {
+    const books = await Book.find().sort(sortQuery(sort)).populate('author')
+    res.json(books)
+  }
+})
+
+app.get('/books/:id', async (req, res) => {
+  const book = await Book.findById(req.params.id).populate('author')
+  if (book) {
+    res.json(book)
+  } else {
+    res.status(404).json({ error: "Book not found" })
+  }
+})
 
 
 app.get('/authors', async (req, res) => {
-  // const authors = await Author.find({ name: "Douglas Adams" })
   const authors = await Author.find()
   res.json(authors)
 })
@@ -75,29 +117,6 @@ app.get('/authors/:id/books', async (req, res) => {
   } else {
     res.status(404).json({ error: "Author not found" })
   }
-})
-
-app.get('/books', async (req, res) => {
-  const { title } = req.query
-  const titleRegex = new RegExp(`\\b${title}\\b`, 'i')
-
-  if (title) {
-    const books = await Book.find({ title: titleRegex }).sort({
-      avarage_rating: -1,
-    })
-    res.json(books)
-
-  } else {
-    const books = await Book.find().populate('author')
-    res.json(books)
-  }
-
-})
-
-
-app.get('/books', async (req, res) => {
-
-  res.json(books)
 })
 
 
